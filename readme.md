@@ -189,5 +189,98 @@ def post_list(request):
 ```
 - 요청(request)를 넘겨받아 render 메서드를 호출
 - render 메서드를 호출해 받은 blog/post_list.html 템플릿을 보여줌 
+- 접속해 확인해 보면 TemplateDoesNotExist 에러 확인 가능 => 템플릿 파일이 없기 때문에 
 
 
+# 템플릿 
+
+- 서로 다른 정보를 일정한 형태로 표시하기 위해 재사용 가능한 파일 
+- 장고 템플릿 양식은 HTML을 사용
+- blog/templates/blog 디렉토리에 저장됨 => 이곳에 post_list.html 파일 생성 => 이 안에 내용을 추가해서 작성하면 됨 
+
+- github에 push 후 pythonanywhere에서 pull 해서 업데이트 해보자
+
+---
+
+# Django ORM => QuerySets
+- QuerySet : 전달받은 모델의 객체 목록 
+
+- Django interactive console 
+```python 
+    python3 manage.py shell
+```
+- 파이썬 프롬프트와 비슷하지만, 장고만의 마법을 부릴 수 있음 
+    - 파이썬의 모든 명령어를 여기서 사용할 수 있음 
+
+## 모든 객체 조회
+
+```shell
+>> from blog.models import
+>> Post.objects.all()
+```
+- Post 모델을 blog.models에서 불러온 것 
+    - 게시된 글 목록이 나타남, python으로 새 글을 포스팅하려면?
+
+## 객체 생성 
+- DB에 새 글 객체를 저장하는 방법에 대해 알아보자
+```python
+>>> Post.objects.all()
+```
+- 작성자로서 User 모델의 인스턴스를 가져와 전달해주어야 한다?
+    - 그리고 게시물을 생성 
+```python
+>>> from django.contrib.auth.models import User
+>>> me = User.objects.get(username='admin')
+
+>>> Post.objects.create(author=me, title='Sample title', text='Test')
+>>> Post.objects.all() # 이것으로 게시글 종류 확인
+```
+
+## 필터링하기
+- Queryset의 중요한 기능 => 데이터를 필터링하는 것 
+- 특정 사용자가 작성한 모든 글을 찾고 싶다??
+    - Post.objects.all => Post.objects.filter()를 사용
+    - 쿼리셋 안에 있는 괄호 안에 원하는 조건을 넣어주자 
+        - 지금 이 경우엔, author가 me인 조건을 넣어야 함 
+```python
+>>> Post.objects.filter(author=me)
+```
+- 모든 글들 중, title에 title이라는 글자가 들어가는 글들만을 뽑아내서 보고 싶다면?
+- title__contains 부분에서 사이에 있는 밑줄 _가 2개 
+    - 장고 ORM은 필드 이름(title)과 연산자와 필터("contains")를 밑줄 2개를 사용해 구분함 
+         - 1개만 입력한다면, FieldError: Cannot resolve keyword title_contains라는 오류 발생
+```python
+>>> Post.objects.filter(title__contains='title')
+```
+
+- 게시글 목록을 볼 수 있나? => published_date로 과거에 작성한 글을 핕터링하면 목록을 불러올 수 있음 
+```python
+>>> from django.utils import timezone
+>>> Post.objects.filter(published_date__lte=timezone.now())
+```
+
+- 게시하려는 게시물의 인스턴스를 얻어야 함
+```python
+>>> post = Post.objects.get(title="Sample title")
+```
+- publish 메소드를 사용해 게시 ㄱㄱ
+```python
+>>> post.publish()
+```
+
+
+## 정렬하기 
+- QuerySet은 객체 목록을 정렬 가능 => created_date 필드를 정렬해보자
+- `-`를 맨 앞에 붙여주면 내림차순 정렬 가능 
+```python
+>>> Post.objects.order_by('created_date')
+>>> Post.objects.order_by('-created_date')
+```
+
+## 쿼리셋 연결도 가능 
+- QuerySet들을 연결 가능 
+```
+>>> Post.objects.filter(published_date__lte=timezone.now())
+.order_by('published_date')
+```
+- 정말 복잡한 쿼리도 작성할 수 있게 해줌 
