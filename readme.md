@@ -284,3 +284,97 @@ def post_list(request):
 .order_by('published_date')
 ```
 - 정말 복잡한 쿼리도 작성할 수 있게 해줌 
+
+
+## 템플릿 동적 데이터 
+
+- 블로그 글은 각각 다른 장소에 조각조각 나누어져 있음 
+- Post 모델 => models.py
+- post_list 모델 => views.py
+- 앞으로 템플릿도 추가해야 함 
+    - HTML 템플릿에서 글 목록을 어떻게 보여줄 것?
+    - 콘텐츠를 가져와 템플릿에 넣어 보여주는 것을 해보자 
+        - 콘텐츠(데이터 베이스 안에 저장되어 있는 모델)
+
+- view : 모델과 템플릿을 연결하는 역할을 함
+    - post_list를 뷰에서 보여주고 이를 템플릿에 전달하기 위해선 모델을 가져와야 함 
+    - 뷰가 템플릿에서 모델을 선택하도록 만들어야 함
+    - 다른 파일에 있는 코드를 어떻게?
+        - models.py 파일에 정의된 모델을 가져올 것 
+```python
+from .models. import Post 
+```
+- from 다음에 있는 . 은 현재 디렉토리 or 애플리케이션을 의미 
+- 동일한 디렉터리 내 views.py, models.py 파일이 있기 때문에 .파일명 => .py 확장자를 붙이지 않아도 됨 => 내용을 가져올 수 있음 
+
+- Post 모델에서 블로그 글을 가져오기 위해선 QuerySet이 필요함 
+
+## Query Set
+- 글 목록을 게시일 기준으로 정렬?
+- timezone 모듈을 불러와서 정렬해야 함
+```python
+from django.utils import timezone
+
+Posts.objects.filter(published_date__lte=timezone.now()
+.order_by('published_date'))
+```
+- posts Queryset을 템플릿 컨텍스트에 전달하는 것이 필요함 
+
+- posts 변수 : 쿼리셋의 이름 
+    - posts 쿼리셋을 템플릿에 보내는 방법?
+
+- render 함수 : 매개변수 request & 'blog/post_list.html' 템플릿이 있음 
+    - request : 사용자가 요청하는 모든 것
+    - {} : 이곳에 템플릿을 사용하기 위해 매개변수를 추가할 필요가 있음 
+        - { 'posts' : posts } 처럼
+        - : 이전에 문자열이 와야 하며, 작은 따옴표를 양쪽에 붙여야 함 
+
+
+## 장고 템플릿 
+- 데이터를 보여주기에 유용한 기능은 템플릿 태그가 존재 => template tags
+
+- 템플릿 태그 
+    - HTML에 파이썬 코드를 바로 넣을 수 없음 
+        - 브라우저는 파이썬 코드를 이해할 수 없음
+    - 브라우저는 HTML만을 알고 있음, HTML은 정적이지만, 파이썬은 동적임 
+
+- post 목록 템플릿 보여주기 
+    - 글 목록이 들어있는 posts 변수를 템플릿에 넘겨 주었다면 
+    - posts 변수를 받아 HTML에 나타나도록 해보자
+    - 장고 템플릿 안에 있는 값을 출력
+        - 변수 이름 안에 중괄호를 넣어 표시해야 함
+    ```html
+    {{ posts }}
+    ```
+    - {{ posts }} : 이것을 객체 목록으로 이해하고 처리했다는 것을 의미 
+    ```html
+    {% for post in posts %}
+        {{ post }}
+    {% %}
+    ```
+
+    - 만들고 나면 디자인이 별로일 수 있음 
+        - 정적 블로그 게시글들이 보이게 만들면 참 좋을텐데....
+        - HTML과 템플릿 태그를 섞어 사용하면 멋있게 만들 수 있음 
+    ```html
+  <div>
+    <h1><a href="/">Django Girls Blog</a></h1>
+</div>
+
+{% for post in posts %}
+    <div>
+        <p>published: {{ post.published_date }}</p>
+        <h1><a href="">{{ post.title }}</a></h1>
+        <p>{{ post.text|linebreaksbr }}</p>
+    </div>
+{% endfor %}
+    ```
+- {% for ~~~ %} 와 {% endfor %} 사이에 넣은 모든 것은 목록의 모든 객체를 반복하게 됨 
+- {{ post.title }} => 이전과 다른 표기법
+    - Post 모델에서 정의한 각 필드의 데이터에 접근하기 위해 이 표기법을 사용함 
+    -  | linebreaksbr => 파이프 문자도 사용함 
+    - 블로그 글 텍스트에서 행이 바뀌면 문단으로 변환하도록 하라는 의미 
+    - 행바뀜을 문단으로 변환하는 필터를 적용한다는 표현을 쓰기도 함
+
+
+
