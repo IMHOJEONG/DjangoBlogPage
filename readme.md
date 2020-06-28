@@ -376,5 +376,72 @@ Posts.objects.filter(published_date__lte=timezone.now()
     - 블로그 글 텍스트에서 행이 바뀌면 문단으로 변환하도록 하라는 의미 
     - 행바뀜을 문단으로 변환하는 필터를 적용한다는 표현을 쓰기도 함
 
+- PythonAnywhere 사이트의 블로그 게시물이 로컬 서버에 호스팅 된 블로그에 나타나는 게시물과 일치하지 않는 것이 정상 
+    - 로컬 컴퓨터와 PythonAnywhere의 데이터베이스는 동기화 되지 않음 
+
+# CSS => BootStrap 추가
+- BootStrap : HTML, CSS 프레임워크 -> 예쁜 웹 사이트 제작 가능 
+
+- 설치 
+    - '<head>'에 링크만 넣어주면 됨
+    - 프로젝트에 인터넷에 있는 파일을 연결하는 것 
+
+## 정적 파일 
+- CSS, 이미지 파일에 해당 
+- 요청 내용에 따라 바뀌는 것이 아니라 모든 사용자들이 동일한 내용을 볼 수 있음
+
+- 정적 파일은 어디에?
+    - 서버에서 collectstatic을 실행할 때 처럼, Django는 admin 앱에서 
+    정적 파일을 어디서 찾아야하는지 이미 알고 있음 
+    - blog 앱에 정적파일을 추가하면 됨 
+    - blog => static 폴더를 만들자
+    - Django는 app 폴더 안에 있는 static 폴더를 자동으로 찾을 수 있음 => 이 컨텐츠를 정적 파일로 사용하게 되는 것
+
+- static 디렉토리 => css => blog.css를 만들어보자 
+    - #으로 시작해 알파벳과 숫자 중 6개를 조합해 hexacode로 나타냄
+    - CSS 파일에선 HTML 파일에 있는 각 요소들에 스타일 정의 가능 
+    - css를 HTML에 추가해 보자 => 맨 처음 줄에 이 라인을 추가하자
+    ```html
+    {% load static %}
+    ```
+    - 위의 부분에 정적 파일을 로딩하는 것 
+    - 다음 head와 /head 사이에 Bootstrap css 파일 링크 다음에 추가
+    ```html
+    <link rel="stylesheet" href="{% static 'css/blog.css' %}">
+    ```
+    - 브라우저는 주어진 순서대로 파일을 읽음 
+        - 파일이 올바른 위치에 있는지 확인해야 함
+        - 파일 코드가 부트 스트랩 파일의 코드를 무시할 수 있는 것을 막기 위해 
+    - 폰트 변경 링크
+        - google 글꼴에서 lobster라는 글꼴을 가져온 것을 말해
+    ```html
+    <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+    ```
+
+## 템플릿 확장하기 
+
+- 우리 웹 사이트 안의 서로 다른 페이지에서 HTML의 일부를 동일하게 재사용할 수 있다는 뜻
+- 동일한 정보/레이아웃을 사용하고자 할 때, 모든 파일마다 같은 내용을 반복해서 입력할 필요가 없게 됨 
+    - 무언가 수정할 부분이 생겼을 때 딱 한번만 수정하면 됨 
+
+- 기본 템플릿 생성
+    - 웹 사이트 내 모든 페이지에 확장되어 사용되는 가장 기본적인 템플릿
+    - blog/templates/blog/ => base.html
+    ```html
+        {% block content %}
+        {% endblock %}
+    ```
+    - body의 주요 부분을 위처럼 변화 
+        - `{% for post in posts%} ~ {% endfor %}` 사이에 있는 모든 내용을 바꿈 
+    - `{% block content %} ~ {% endblock %}`
+        - block을 만든 것 => HTML 내에 들어갈 수 있는 공간을 만듬 
+        - base.html을 확장해 다른 템플릿에도 가져다 쓸 수 있게 한 것 
+        - post_list.html의 내용을 for문 제외하고 다 삭제 
+    - why? 이 코드를 모든 컨텐츠 블록에 대한 템플릿의 일부로 작성할 예정 => 이 파일에 블록 태그를 추가
+    - 주의! 블록 태그가 base.html 파일의 태그와 일치해야 함 & 콘텐츠 블록에 속한 모든 코드를 포함하게 만들어야 할 것 
+        - `{% block content %} ~ {% endblock %}` 안에 넣어두자
+    - 두 개의 템플릿을 연결해야 함 
+        - 확장 태그를 파일 맨 처음에 추가
+        - `{% extends 'blog/base.html' %}`
 
 

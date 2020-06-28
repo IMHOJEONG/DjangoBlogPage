@@ -1,16 +1,13 @@
-<html>
-        <head>
-                <title>ImhoJeong`s blog composed by Django</title>
-        </head>
-        <p>
-                Lists
-        </p>
+{% extends 'blog/base.html' %}
+ 
+{% block content %}
         {% for post in posts %}
-        <div>
+        <div class="post">
                 <p>published: {{ post.published_date }}</p>
                 <h1><a href="">{{ post.title }}</a></h1>
                 <p>{{ post.text|linebreaksbr }}</p>
         </div>
         {% endfor %}
-</html> 
+{% endblock %}
+
 
