@@ -445,3 +445,82 @@ Posts.objects.filter(published_date__lte=timezone.now()
         - `{% extends 'blog/base.html' %}`
 
 
+## 애플리케이션 확장 
+- 블로그 게시글이 각 페이지마다 보이게 만들어 보자, 이미 앞에서 Post 모델을 만들었으니 models.py에 새로 추가할 내용은 없음 
+
+```html
+<h1><a href="{% url 'post_detail' pk=post.pk %}">{{ post.title }} </a></h1>
+```
+- 이 코드를 위처럼 수정해서 Post 제목 목록이 보이고 해당 링크를 클릭하면 post 상세 페이지로 이동하게 만듬 
+- `{% url 'post_detail' pk=post.pk %}` : `{% %}` - 장고 템플릿 태그 => URL을 생성해 사용해보자
+    - blog.views.post_detail : post_detail 뷰 경로 
+    - `blog은 응용프로그램 (디렉터리 blog)의 이름인 것!`
+    - views : views.py 의 파일명 -> post_detail은 view 이름 
+
+- pk = post.pk : pk - 데이터베이스의 각 레코드를 식별하는 기본키(Primary key)의 줄임말 
+    - post 모델에서 기본키를 지정하지 않았기 때문에 Django는 pk라는 필드를 추가해 새로운 블로그 게시물이 추가될 때마다 그 value가 1,2,3 등으로 증가하게 됨 
+    - Post 객체의 다른 필드에 액세스하는 것과 같은 방식으로 post.pk를 작성해 기본키에 액세스
+    - post.pk를 써서 기본키에 접근 가능 & Post 객체 내 다른 필드(title, author)에도 접근 가능 
+
+## Post 상세 페이지 URL 만들기 
+- post_detail view가 보이게 urls.py에 URL을 만들어야 함 
+    - blog/urls.py 파일에 URL을 만들어 장고가 post_detail 뷰로 보내, 게시글이 보일 수 있게 해보자 
+    - `path('post/<int:pk>/', views.post_detail, name='post_detail')` 코드를 추가 
+    - `post/<int:pk>` : URL 패턴을 나타냄 
+        - post/ : URL이 post문자를 포함해야 한다는 것을 말함 
+        - `<int: pk>` : 장고는 정수value를 기대하고 이를 pk라는 변수로 뷰로 전송하는 것을 의미 
+        - `/` : 다음에 /가 한 번 더 와야 한다는 의미
+    - ex) http://127.0.0.1:8000/post/5
+        - 장고는 post_detail 뷰를 찾아 매개변수 pk가 5인 value를 찾아 뷰로 전달 
+
+## Post 상세 페이지 내 뷰 추가하기 
+- 뷰에 매개변수 pk를 추가해보자 -> 뷰가 pk를 식별해야 함 
+```python
+    def post_detail(request, pk):
+```
+- urls(pk)와 동일하게 이름을 사용해야 함 => 변수가 생략되면 오류가 발생 
+- 블로그 게시글 한 개만 보려면? 
+```python
+Post.objects.get(pk=pk)
+```
+- 하지만 위 코드에는 문제가 존재 => 만약 해당 primary key의 Post를 찾지 못하면 오류가 발생
+- Django에선 이를 해결하기 위해 get_object_or_404라는 특별한 기능을 제공 
+    - pk에 해당하는 Post가 없을 경우 : 페이지를 찾을 수 없음 404 : Page Not Found 404를 보여줄 예정
+
+- 나중에 Page not found 페이지를 예쁘게 만들 수 있음 
+
+- views.py 파일에 새로운 뷰를 추가하자
+    - blog/urls.py 파일에서 views.post_detail라는 뷰를 post_detail 이라 이름을 붙이도록 URL 법칙을 만듬 
+        - Django가 post_detail이라는 이름을 해석할 때, blog/views.py 파일 내부의 post_detail이라는 뷰 함수로 이해하도록 해줌 
+    ```python
+    from django.shortcuts import render, get_object_or_404
+    ```
+    - 위의 모듈 import하고 파일 마지막 부분에 뷰를 추가 
+    ```python
+    def post_detail(request, pk):
+        post = get_object_or_404(Post, pk=pk)
+        return render(request, 'blog/post_detail.html', { 'post' : post})
+    ```
+     
+## Post 상세 페이지 템플릿 만들기
+- blog/templates/blog 디렉토리 안 post_detail.html이라는 새 파일 생성 후 작성
+```html
+{% extends 'blog/base.html' %}
+
+{% block content %}
+    <div class="post">
+        {% if post.published_date %}
+            <div class="date">
+                {{ post.published_date }}
+            </div>
+        {% endif %}
+        <h1>{{ post.title }}</h1>
+        <p>{{ post.text|linebreaksbr }}</p>
+    </div>
+{% endblock %}
+```
+- base.html을 확장한 결과, content 블록에서 블로그 글의 게시일, 재목과 내용을 보이게 만듬 
+
+- 가장 중요한 부분 `{% if ... %} ~ {% endif %}`라는 템플릿 태그
+    - 내용이 있는지 확인할 때 사용함 
+    - 위의 경우 : post의 게시일이 있는지 없는지 확인하는 것
