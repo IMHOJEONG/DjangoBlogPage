@@ -524,3 +524,203 @@ Post.objects.get(pk=pk)
 - 가장 중요한 부분 `{% if ... %} ~ {% endif %}`라는 템플릿 태그
     - 내용이 있는지 확인할 때 사용함 
     - 위의 경우 : post의 게시일이 있는지 없는지 확인하는 것
+
+## Django Form
+- Blog 글 추가 및 수정하는 것 & 폼으로 엄청난 인터페이스를 만들 수 있음 
+- 아무런 준비 없이도 양식 만들 수 있고 ModelForm을 생성해 자동으로 모델에 결과물을 저장할 수 있다는 것
+- 폼을 하나 만들어서 Post 모델에 적용
+- 장고의 모든 중요한 부분과 마찬가지로, 폼도 폼만의 forms.py라는 파일을 만들어짐 
+- blog - forms.py
+```python
+from django import forms 
+
+from .models import Post
+
+class PostForm(forms.ModelForm):
+
+        class Meta:
+            model = Post
+            fields = ('title', 'text',)
+```
+- forms model을 import 해야 하고 model도 import 해야 함 
+- PostForm : 우리가 만들 폼의 이름 -> Django에 이 폼이 ModelForm이라는 것을 알려주자 
+    - forms.ModelForm : ModelForm이라는 것을 알려주는 구문 
+- class Meta : 이 폼을 만들기 위해 어떤 model이 쓰여야 하는지 장고에 알려주는 구문 
+    - model = post 부분을 통해 
+
+- 이 폼에 필드를 넣으면, title, text만 보여지게 하자 
+    - author는 현재 로그인 하고 있는 사람, created_data - 글이 등록되는 시간 
+
+- 뷰애서 이 폼을 사용해 템플릿에서 보여주기만 하자 
+    - 링크, URL, 뷰 그리고 템플릿을 만들자
+
+## 폼과 페이지 링크 
+- blog/templates/blog/base.html에 링크를 하나 추가
+```html
+<a href="{% url 'post_new' %}" class="top-menu"><span class="glyphicon glyphicon-plus"></span></a>
+```
+- post_new라는 새로운 뷰, 부트스트랩 테마에 있는 glyphicon glyphicon-plus 클래스로 더하기 기호가 보이게 됨 
+- NoReverseMatch라는 에러가 나옴 ====> ?????
+
+## URL
+- blog/urls.py에 구문 추가
+```python
+path('post/new', views.post_new, name='post_new'),
+```
+- 브라우저에 사이트를 다시 불러오면 AttributeError
+    - 아직 post_new 뷰를 구현하지 않아서 
+
+## post_new view
+- blog/views.py 
+```python
+from .forms import PostForm
+
+// ....
+
+def post_new(request):
+    form = PostForm()
+    return render(request, 'blog/post_edit.html', { 'form': form})
+```
+- 새 Post 폼을 추가하기 위해 PostForm() 함수를 호출하도록 해 템플릿에 넘김 
+
+## 템플릿 
+- blog/templates/blog 디렉터리 안에 post_edit.html 파일을 생성해 폼이 작동할 수 있게 하자
+    ```html
+    {% extends 'blog/base.html' %}
+
+    {% block content %}
+        <h1>New post</h1>
+        <form method="POST" class="post-form">{% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="save btn btn-default">Save</button>
+        </form>
+    {% endblock %}
+    ```
+- 먼저 폼이 보여야 함 : `{{ form.as_p }}`
+    - HTML 태그로 폼을 가두어야 함 : `<form method="POST">...</form>`
+- Save 버튼이 필요함 => HTML 버튼으로 만들 수 있음 
+    - `<button type="submit">Save</button>`
+- 마지막으로 `<form ...>`을 열어 `{% csrf_token %}`를 추가해야 함
+    - 폼 보안을 위해 중요하다고 함 => 장고는 이렇게 불평할 것
+
+- 이 상태에서 title, text 필드에 아무거나 입력하고 저장해보자 
+    - 글이 사라지는 문제 => 입력한 글들이 어디론가 사라지고 새 글이 추가되지 않음 
+    - view 추가 적업이 필요할 뿐 
+
+## 폼 저장하기 
+- blog/views.py
+```python
+def post_new(request):
+    form = PostForm()
+    return render(request, 'blog/post_edit.html', {'form': form})
+```
+- 폼을 제출할 때 같은 뷰를 불러옴, 이 때 request에는 우리가 입력했던 데이터들을 가지고 있음 
+    - request.POST가 이 데이터를 가짐 
+    - HTML에서 `<form>`정의에 method="POST"라는 속성이 있던거 기억함?
+        - 이렇게 POST로 넘겨진 폼 필드의 value들은 request.POST에 저장됨 
+        - POST로 된 value를 다른 거로 바꾸면 안 됨 
+    
+- view에서 2가지 상황
+    1. 첫 번째 : 처음 페이지에 접속했을 때 => 우리가 새 글을 쓸 수 있게 폼이 비어있어야 함
+    2. 두 번째 : 폼에 입력된 데이터를 view 페이지로 가지고 올 때 
+        - 조건문이 필요함 
+    ```python
+    # blog/views.py
+    if request.method == "POST":
+        ...
+    else:
+        form = PostForm()
+    ```
+    - 만약 method가 POST라면, 폼에서 받은 데이터를 PostForm으로 넘겨주어야겠지?
+    ```python
+        form = PostForm(request.POST)
+    ```
+    - 폼에 들어있는 value들이 올바른지를 확인해야 함 
+        - 모든 필드에는 value가 있어야 하고 잘못된 value가 있다면 저장하면 되지 않아야 함
+        - `form.is_valid()`를 사용해야 함
+        - 폼에 입력된 value가 올바른지 확인한 다음, 저장되는 것
+    ```python
+    if form.is_valid():
+        post = form.save(commit=False)
+        post.author = request.user
+        post.published_date = timezone.now()
+        post.save()
+    ```
+    - 2가지로 이 단계를 나누어보자
+    1. form.save()로 폼을 저장하는 작업 
+    2. 작성자를 추가하는 작업 
+    - PostForm에는 작성자 필드가 없음 but 필드 value가 필요함 
+    - commit=False?? 넘겨진 데이터를 바로 Post 모델에 저장하지는 말라는 뜻 
+        - why? 작성자를 추가한 다음 저장해야 하니까
+        - 대부분의 경우엔 commit=False를 쓰지 않고 바로 form.save()를 사용해서 저장함 
+        - 여기선 작성자 정보를 추가하고 저장해야 하므로 commit=False를 사용하는 것 
+        - post.save()는 변경사항(작성자 정보를 포함)을 유지 & 새 블로그 글이 만들어질 것 
+    - 새 블로그 글을 작성한 다음 post_detail 페이지로 이동할 수 있다면?
+        - 이 모듈을 불러와서 사용해야 함 
+    ```python
+    from django.shortcuts import redirect
+    ```
+    ```python
+    return redirect('post_detail', pk=post.pk)
+    ```
+    - post_detail : 우리가 이동해야할 뷰의 이름 
+        - post_detail 뷰는 pk 변수가 필요함!
+        - pk=post.pk를 사용해 뷰에게 value를 넘겨줄 것 
+        - 여기서 post는 새로 생성한 블로그 글 
+
+- 사용자가 로그아웃되는 상황이 발생하기도 함 
+    - 브라우저가 닫히거나, DB가 재시작된다든가
+    - 만약 로그인 되지 않은 상태에서 새 글을 저장한다면?
+    - 사용자가 로그인되어 있지 않아 누구 글을 작성하였는지 알 수 없음 
+    - 그래서 글을 저장할 때 오류가 발생 & 로그인 시키도록 관리자 페이지가 나타나게 될 것 
+
+## 폼 수정 
+- 폼 수정 버튼 추가
+```html
+<a class="btn btn-default" href="{% url 'post_edit' pk=post.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
+```
+- urls.py에 다음 코드 추가
+```python
+    path('post/<int:pk>/edit/', views.post_edit, name='post_edit'),
+```
+- post_edit.html 템플릿을 재사용할 것 
+    - view를 만드는 것 
+    - blog/views.py
+    ```python
+    def post_edit(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    if request.method == "POST":
+        form = PostForm(request.POST, instance=post)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.published_date = timezone.now()
+            post.save()
+            return redirect('post_detail', pk=post.pk)
+    else:
+        form = PostForm(instance=post)
+    return render(request, 'blog/post_edit.html', {'form': form})
+    ```
+    - post_new? 아님 
+    1. url로부터 추가로 pk 매개변수를 받아서 처리함 
+    2. get_object_or_404(Post, pk=pk)를 호출해 수정하고자 하는 글의 Post 모델 인스턴스를 가져옴 
+        - pk로 원하는 글을 찾음 
+        - 이렇게 가져온 데이터를 폼을 만들 때(글을 수정할 때 폼에 이전에 입력했던 데이터가 있어야 하겠지?) - 폼을 저장할 때 사용하게 됨 
+    - blog/views.py
+    ```python
+    form = PostForm(request.POST, instance=post)
+
+    form = PostForm(instance=post)
+    ```
+## 보안 
+- 나에게만 보이고 다른 사람에게는 보이지 않으려는 버튼은?
+- {% if %} 태그를 추가해 관리자로 로그인한 유저들만 링크가 보일 수 있게 만들 것 
+```python
+{% if user.is_authenticated %}
+    <a href="{% url 'post_new' %}" class="top-menu"><span class="glyphicon glyphicon-plus"></span></a>
+{% endif %}
+```
+- {% if %}는 브라우저에 페이지를 요청하는 사용자가 로그인 하는 경우 링크가 발생됨 
+    - 새 게시글을 완전히 보호하진 않음 => 바람직함
+
+- 로그인했기 때문에, 페이지 새로고침을 해도 아무것도 표시되지 않을 것 
